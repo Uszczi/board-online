@@ -18,6 +18,7 @@ lint:
 #############
 sync-deps:
 	python -m piptools sync "./requirements/dev.txt"
+	pip install -e .
 
 compile-deps:
 	python -m piptools compile --no-header "./requirements/dev.in"
