@@ -28,3 +28,5 @@ typing-extensions==4.0.1
     # via
     #   black
     #   mypy
+numpy==1.22.1
+opencv_python==4.5.5
