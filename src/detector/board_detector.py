@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import cv2 as cv
 
@@ -9,9 +11,31 @@ class BoardDetector:
 
         corners = self.__detect_corners(gray)
         locations = self.__get_corner_locations(gray, corners)
-        filtered = self.__sort_and_cleanup(locations)
+        filtered = self.__sort_and_cleanup_corners(locations)
+
+        try:
+            return self.__redetect_by_corners(filtered)
+        except IndexError:
+            print("WARN: Cannot match board fields")
+            pass
 
         return filtered
+
+    def __redetect_by_corners(self, corners):
+        transposed = [[item for item in row if item is not None] for row in itertools.zip_longest(*corners)]
+        y_values = []
+        x_values = []
+
+        for row in range(len(corners)):
+            y_values.append(np.median(corners[row], 0)[1])
+            x_values.append(np.median(transposed[row], 0)[0])
+
+        new_corners = np.full((len(x_values), len(y_values), 2), 0)
+        for x in range(len(x_values)):
+            for y in range(len(y_values)):
+                new_corners[x, y] = (x_values[x], y_values[y])
+
+        return new_corners
 
     def __detect_corners(self, image):
         # Remove details
@@ -41,8 +65,7 @@ class BoardDetector:
         corners = cv.cornerSubPix(gray_image, np.float32(centroids), (5,5), (-1,-1), criteria)
         return corners
 
-    def __sort_and_cleanup(self, corners):
-        MAX_DELTA = 3
+    def __sort_and_cleanup_corners(self, corners, field_size=60):
         rows = [[]]
 
         # Sort by Y-axis
@@ -51,7 +74,7 @@ class BoardDetector:
         # Classify row of each point
         prev_y = corners[0, 1]
         for point in corners:
-            if abs(point[1] - prev_y) > MAX_DELTA:
+            if abs(point[1] - prev_y) > field_size/4:
                 rows.append([]) # If distance is greater then classify to next row
 
             prev_y = point[1]
@@ -65,14 +88,14 @@ class BoardDetector:
             row.sort(key=lambda k: k[0])
 
             # Filter entire rows
-            if current_index > 0 and abs(row[0][1] - prev_y) < 15 or len(row) < 8:
+            if current_index > 0 and abs(row[0][1] - prev_y) < field_size/3 or len(row) < 8:
                 current_index += 1
                 continue
 
             current_index += 1
             prev_y = row[0][1]
 
-            # Averange distance on X-axis in a row
+            # Median distance on X-axis in a row
             avg = np.average(np.abs([j[0] - i[0] for i, j in zip(row[:-1], row[1:])]))
 
             # Filter points on X-axis
