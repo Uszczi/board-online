@@ -3,6 +3,9 @@ import sys, os
 import glob
 import json
 
+from pprint import pprint
+import io
+
 import numpy as np
 import cv2 as cv
 
@@ -15,12 +18,12 @@ class PieceDetectionTest(unittest.TestCase):
     TEST_DATA = "./tests/test_data"
 
     def testPieceDetection(self):
-        # image_files = glob.glob(f"{self.TEST_DATA}/*.JPG")
-        image_files = [f"{self.TEST_DATA}/full.JPG" ]
+        image_files = glob.glob(f"{self.TEST_DATA}/*.JPG")
+        #image_files = [f"{self.TEST_DATA}/full.JPG" ]
 
         for image_name in image_files:
             img = cv.imread(image_name)
-            img = cv.resize(img, None, fx=0.3, fy=0.3, interpolation = cv.INTER_CUBIC)
+            img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
 
             detector = BoardDetector()
             fields = detector.detect_fields(img)
@@ -32,7 +35,17 @@ class PieceDetectionTest(unittest.TestCase):
             with open(json_file) as expected_data:
                 expected = json.load(expected_data)
 
-            self.assertTrue(self.__compare(expected, pieces.plain()))
+            corners = fields
+            for row in range(len(corners)):
+                for point in range(len(corners[row])):
+                    color = (0, 0, 255) if row == point else (0,255,0)
+                    cv.circle(img, (int(corners[row][point][0]), int(corners[row][point][1])), 7, color, 2)
+                    cv.putText(img,  f"{(row, point)}", (int(corners[row][point][0]), int(corners[row][point][1])), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255))
+
+            cv.imshow('img', img)
+            cv.waitKey(0)
+
+            # self.assertTrue(self.__compare(expected, pieces.plain()))
 
     def __compare(self, data1, data2):
         return self.__ordered(data1) == self.__ordered(data2)
@@ -47,3 +60,4 @@ class PieceDetectionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    cv.destroyAllWindows()
