@@ -9,10 +9,13 @@ from board_detector import BoardDetector
 TEST_DATA = "./tests/test_data"
 
 img = cv.imread(f"{TEST_DATA}/full.JPG")
-img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
+img = cv.resize(img, None, fx=0.3, fy=0.3, interpolation = cv.INTER_CUBIC)
 
-detector = BoardDetector()
-corners = detector.detect_fields(img)
+detector = BoardDetector(img)
+img = detector.get_board()
+
+detector.update_image(img)
+corners = detector.detect_fields()
 
 for row in range(len(corners)):
     for point in range(len(corners[row])):

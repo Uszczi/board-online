@@ -6,26 +6,78 @@ import cv2 as cv
 CORNER_COUNT = 9
 
 class BoardDetector:
-    def detect_fields(self, image):
-        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    def __init__(self, image):
+        self.update_image(image)
 
-        corners = self.__detect_corners(gray)
-        locations = self.__get_corner_locations(gray, corners)
+    def update_image(self, image):
+        self.image = image
+        self.gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
+        # Remove details
+        kernel = cv.getStructuringElement(cv.MORPH_RECT, (8,8))
+        opening = cv.morphologyEx(self.gray, cv.MORPH_OPEN, kernel)
+
+        # Blur image - remove more details
+        self.filtered = cv.GaussianBlur(opening, (3,3), 0)
+
+    def get_board(self):
+        rect = self.detect_board()
+        return self.crop_minAreaRect(self.image, rect)
+
+    def detect_board(self):
+        _, thresh = cv.threshold(self.filtered, 30, 255, cv.THRESH_BINARY_INV)
+
+        kernel = cv.getStructuringElement(cv.MORPH_RECT, (8,8))
+        opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+
+        contours, _ = cv.findContours(opening, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+        max_area = 0
+        max_rect = None
+        for cnt in contours:
+            area = cv.contourArea(cnt)
+            if area > max_area:
+                max_area = area
+                max_rect = cv.minAreaRect(cnt)
+
+        return max_rect
+
+    def crop_minAreaRect(self, img, rect):
+        angle = rect[2]
+        rows,cols = img.shape[0], img.shape[1]
+        M = cv.getRotationMatrix2D((cols/2,rows/2),angle,1)
+        img_rot = cv.warpAffine(img,M,(cols,rows))
+
+        # rotate bounding box
+        box = cv.boxPoints(rect)
+        pts = np.int0(cv.transform(np.array([box]), M))[0]
+        pts[pts < 0] = 0
+
+        # crop
+        img_crop = img_rot[pts[1][1]:pts[0][1],
+                        pts[1][0]:pts[2][0]]
+
+        return img_crop
+
+    def detect_fields(self):
+        corners = self.__detect_corners()
+        locations = self.__get_corner_locations(corners)
         filtered = self.__sort_and_cleanup_corners(locations)
 
         try:
-            return self.__redetect_by_corners(filtered)
+            return self.__redetect_corners(filtered)
         except IndexError:
             print("WARN: Cannot match board fields")
             pass
 
         return filtered
 
-    def __redetect_by_corners(self, corners):
+    def __redetect_corners(self, corners):
         transposed = [[item for item in row if item is not None] for row in itertools.zip_longest(*corners)]
         y_values = []
         x_values = []
 
+        # Re-detect points by virtual line intersection
         for row in range(len(corners)):
             y_values.append(np.median(corners[row], 0)[1])
             x_values.append(np.median(transposed[row], 0)[0])
@@ -37,23 +89,16 @@ class BoardDetector:
 
         return new_corners
 
-    def __detect_corners(self, image):
-        # Remove details
-        kernel = cv.getStructuringElement(cv.MORPH_RECT, (8,8))
-        opening = cv.morphologyEx(image, cv.MORPH_OPEN, kernel)
-
-        # Blur image - remove more details
-        blurred = cv.GaussianBlur(opening, (3,3), 0)
-
+    def __detect_corners(self):
         # Detect corners
-        blurred = np.float32(blurred)
-        corners = cv.cornerHarris(blurred, 4, 5, 0.04)
+        filtered = np.float32(self.filtered)
+        corners = cv.cornerHarris(filtered, 4, 5, 0.04)
 
         # Remove noise around corners
         filtered_corner_data = cv.morphologyEx(corners, cv.MORPH_CLOSE, None)
         return filtered_corner_data
 
-    def __get_corner_locations(self, gray_image, corner_data):
+    def __get_corner_locations(self, corner_data):
         # Get local maximas
         ret, dst = cv.threshold(corner_data, 0.1*corner_data.max(), 255, 0)
         dst = np.uint8(dst)
@@ -62,7 +107,7 @@ class BoardDetector:
         criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 100, 0.001)
 
         # Get corner centers (subpixel accuracy)
-        corners = cv.cornerSubPix(gray_image, np.float32(centroids), (5,5), (-1,-1), criteria)
+        corners = cv.cornerSubPix(self.gray, np.float32(centroids), (5,5), (-1,-1), criteria)
         return corners
 
     def __sort_and_cleanup_corners(self, corners, field_size=60):
