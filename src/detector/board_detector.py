@@ -48,7 +48,10 @@ class BoardDetector:
             cv.imshow('image', self.image)
             cv.waitKey(0)
 
-        return self.crop_minAreaRect(self.image, rect)
+        if rect is not None:
+            self.crop_minAreaRect(self.image, rect)
+
+        return self.image
 
     def detect_board(self):
         _, thresh = cv.threshold(self.filtered, 50, 255, cv.THRESH_BINARY_INV)
