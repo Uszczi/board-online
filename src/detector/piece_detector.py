@@ -38,6 +38,9 @@ class PieceDetector:
                 field_image = self.__get_field_image(top_left, bottom_right)
                 field_name = self.from_xy(x, y)
 
+                if len(field_image) == 0:
+                    return board
+
                 if self.__is_white_piece(field_image):
                     board.add_white(field_name)
                     self.__drawDebug(top_left, bottom_right, (69, 255, 69))

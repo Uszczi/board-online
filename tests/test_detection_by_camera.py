@@ -20,7 +20,7 @@ while(True):
         print("No frame from camera")
         continue
 
-    img = cv.resize(frame, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
+    img = cv.resize(frame, None, fx=0.8, fy=0.8, interpolation = cv.INTER_CUBIC)
 
     detector = BoardDetector(img, rotate=False, debug=False)
     img = detector.get_board()
@@ -29,14 +29,17 @@ while(True):
         print("No board detected!")
         continue
 
-    detector.update_image(img)
-    fields = detector.detect_fields()
+    try:
+        detector.update_image(img)
+        fields = detector.detect_fields()
 
-    piece_detector = PieceDetector(img, debug=True)
-    pieces = piece_detector.detect_pieces(fields)
+        piece_detector = PieceDetector(img, debug=True)
+        pieces = piece_detector.detect_pieces(fields)
 
-    print(pieces.plain())
-    cv.imshow('img', img)
+        print(pieces.plain())
+        cv.imshow('img', img)
+    except Exception as e:
+        print(str(e))
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
