@@ -25,11 +25,14 @@ class PieceDetectionTest(unittest.TestCase):
             img = cv.imread(image_name)
             img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
 
-            detector = BoardDetector()
-            fields = detector.detect_fields(img)
+            detector = BoardDetector(img, debug=False)
+            img = detector.get_board()
 
-            piece_detector = PieceDetector()
-            pieces = piece_detector.detect_pieces(img, fields)
+            detector.update_image(img)
+            fields = detector.detect_fields()
+
+            piece_detector = PieceDetector(img, debug=True)
+            pieces = piece_detector.detect_pieces(fields)
 
             json_file = os.path.splitext(image_name)[0] + ".json"
             with open(json_file) as expected_data:
@@ -44,6 +47,8 @@ class PieceDetectionTest(unittest.TestCase):
 
             cv.imshow('img', img)
             cv.waitKey(0)
+
+            cv.destroyAllWindows()
 
             # self.assertTrue(self.__compare(expected, pieces.plain()))
 
@@ -60,4 +65,3 @@ class PieceDetectionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    cv.destroyAllWindows()

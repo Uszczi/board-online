@@ -4,21 +4,19 @@ import cv2 as cv
 
 sys.path.append("./src/detector")
 
-from board_detector import BoardDetector
+from board_detector import BoardDetector, draw_corners
 
 TEST_DATA = "./tests/test_data"
 
 img = cv.imread(f"{TEST_DATA}/full.JPG")
-img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
+img = cv.resize(img, None, fx=0.3, fy=0.3, interpolation = cv.INTER_CUBIC)
 
-detector = BoardDetector()
-corners = detector.detect_fields(img)
+detector = BoardDetector(img, True)
+img = detector.get_board()
 
-for row in range(len(corners)):
-    for point in range(len(corners[row])):
-        color = (0, 0, 255) if row == point else (0,255,0)
-        cv.circle(img, (int(corners[row][point][0]), int(corners[row][point][1])), 7, color, 2)
-        cv.putText(img,  f"{(row, point)}", (int(corners[row][point][0]), int(corners[row][point][1])), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255))
+detector.update_image(img)
+corners = detector.detect_fields()
+draw_corners(img, corners)
 
 cv.imshow('dst',img)
 
