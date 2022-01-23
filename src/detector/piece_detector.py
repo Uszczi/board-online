@@ -14,6 +14,7 @@ class PieceDetector:
     def detect_pieces(self, fields):
         board = CheckersBoard()
         avg_value = np.average(self.image) - 20
+        fields = np.int0(fields)
 
         for x in range(0, len(fields) - 1):
             y0 = 1 if x % 2 == 0 else 0

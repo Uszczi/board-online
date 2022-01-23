@@ -25,7 +25,7 @@ class PieceDetectionTest(unittest.TestCase):
             img = cv.imread(image_name)
             img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
 
-            detector = BoardDetector(img)
+            detector = BoardDetector(img, debug=False)
             img = detector.get_board()
 
             detector.update_image(img)
@@ -48,6 +48,8 @@ class PieceDetectionTest(unittest.TestCase):
             cv.imshow('img', img)
             cv.waitKey(0)
 
+            cv.destroyAllWindows()
+
             # self.assertTrue(self.__compare(expected, pieces.plain()))
 
     def __compare(self, data1, data2):
@@ -63,4 +65,3 @@ class PieceDetectionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    cv.destroyAllWindows()

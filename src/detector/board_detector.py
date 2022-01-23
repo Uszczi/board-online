@@ -5,30 +5,55 @@ import cv2 as cv
 
 CORNER_COUNT = 9
 
+def draw_corners(img, corners):
+    for row in range(len(corners)):
+        for point in range(len(corners[row])):
+            color = (0, 0, 255) if row == point else (0,255,0)
+            cv.circle(img, (int(corners[row][point][0]), int(corners[row][point][1])), 7, color, 2)
+            cv.putText(img,  f"{(row, point)}", (int(corners[row][point][0]), int(corners[row][point][1])), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255))
+
 class BoardDetector:
-    def __init__(self, image):
+    def __init__(self, image, debug=False):
+        self.debug = debug
         self.update_image(image)
+
+    def __debug_show(self, image):
+        if self.debug:
+            cv.imshow(f"{image}", image)
+            cv.waitKey(0)
 
     def update_image(self, image):
         self.image = image
         self.gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
+        self.__debug_show(self.gray)
 
         # Remove details
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (8,8))
         opening = cv.morphologyEx(self.gray, cv.MORPH_OPEN, kernel)
 
         # Blur image - remove more details
-        self.filtered = cv.GaussianBlur(opening, (3,3), 0)
+        self.filtered = cv.GaussianBlur(opening, (3,3), 1)
+        self.__debug_show(self.filtered)
 
     def get_board(self):
         rect = self.detect_board()
+        box = np.int0(cv.boxPoints(rect))
+
+        if self.debug:
+            cv.rectangle(self.image, box[0], box[2], (0, 0, 255), 2)
+            cv.imshow('image', self.image)
+            cv.waitKey(0)
+
         return self.crop_minAreaRect(self.image, rect)
 
     def detect_board(self):
-        _, thresh = cv.threshold(self.filtered, 30, 255, cv.THRESH_BINARY_INV)
+        _, thresh = cv.threshold(self.filtered, 50, 255, cv.THRESH_BINARY_INV)
 
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (8,8))
         opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+
+        self.__debug_show(opening)
 
         contours, _ = cv.findContours(opening, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
@@ -64,13 +89,17 @@ class BoardDetector:
         locations = self.__get_corner_locations(corners)
         filtered = self.__sort_and_cleanup_corners(locations)
 
+        if self.debug:
+            img = np.copy(self.image)
+            draw_corners(img, filtered)
+            cv.imshow('image', img)
+            cv.waitKey(0)
+
         try:
             return self.__redetect_corners(filtered)
         except IndexError:
             print("WARN: Cannot match board fields")
-            pass
-
-        return filtered
+            return []
 
     def __redetect_corners(self, corners):
         transposed = [[item for item in row if item is not None] for row in itertools.zip_longest(*corners)]
@@ -133,7 +162,7 @@ class BoardDetector:
             row.sort(key=lambda k: k[0])
 
             # Filter entire rows
-            if current_index > 0 and abs(row[0][1] - prev_y) < field_size/3 or len(row) < 8:
+            if current_index > 0 and abs(row[0][1] - prev_y) < field_size/3 or len(row) < 3:
                 current_index += 1
                 continue
 
