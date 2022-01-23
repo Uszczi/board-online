@@ -19,10 +19,12 @@ class PieceDetectionTest(unittest.TestCase):
 
     def testPieceDetection(self):
         image_files = glob.glob(f"{self.TEST_DATA}/*.JPG")
-        #image_files = [f"{self.TEST_DATA}/full.JPG" ]
+        # image_files = [f"{self.TEST_DATA}/full.JPG" ]
 
         for image_name in image_files:
             cv.destroyAllWindows()
+
+            print(image_name)
 
             img = cv.imread(image_name)
             img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)

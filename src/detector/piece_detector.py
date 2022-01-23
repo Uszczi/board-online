@@ -12,12 +12,12 @@ class PieceDetector:
         self.upper_white = np.array([180,30,255])
 
         # lower boundary RED color range values; Hue (0 - 10)
-        self.lower1 = np.array([0, 70, 20])
+        self.lower1 = np.array([0, 70, 50])
         self.upper1 = np.array([20, 255, 255])
 
         # upper boundary RED color range values; Hue (160 - 180)
-        self.lower2 = np.array([150,70,20])
-        self.upper2 = np.array([180,255,255])
+        self.lower2 = np.array([150, 70, 50])
+        self.upper2 = np.array([180, 255, 255])
 
         hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
         hsv = cv.GaussianBlur(hsv, (5,5), 1)
@@ -56,13 +56,15 @@ class PieceDetector:
 
     def __is_white_piece(self, field_image, threshold = 60):
         mask = cv.inRange(field_image, self.lower_white, self.upper_white)
-
         return np.average(mask) > threshold
 
     def __is_black_piece(self, field_image, threshold = 80):
         lower_mask = cv.inRange(field_image, self.lower1, self.upper1)
         upper_mask = cv.inRange(field_image, self.lower2, self.upper2)
         full_mask = lower_mask | upper_mask
+
+        # cv.imshow("full_mask", full_mask)
+        # cv.waitKey(0)
 
         return np.average(full_mask) > threshold
 
