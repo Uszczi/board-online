@@ -13,8 +13,11 @@ def draw_corners(img, corners):
             cv.putText(img,  f"{(row, point)}", (int(corners[row][point][0]), int(corners[row][point][1])), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255))
 
 class BoardDetector:
-    def __init__(self, image, debug=False):
+    def __init__(self, image, crop=True, rotate=True, debug=False):
+        self.crop = crop
+        self.rotate = rotate
         self.debug = debug
+
         self.update_image(image)
 
     def __debug_show(self, image):
@@ -68,25 +71,31 @@ class BoardDetector:
         return max_rect
 
     def crop_minAreaRect(self, img, rect):
-        angle = rect[2]
+        angle = np.clip(90 - rect[2], 0, 90)
         rows,cols = img.shape[0], img.shape[1]
-        M = cv.getRotationMatrix2D((cols/2,rows/2),angle,1)
-        img_rot = cv.warpAffine(img,M,(cols,rows))
-
-        # rotate bounding box
         box = cv.boxPoints(rect)
-        pts = np.int0(cv.transform(np.array([box]), M))[0]
+
+        if self.rotate:
+            M = cv.getRotationMatrix2D((cols/2,rows/2),angle,1)
+            img_rot = cv.warpAffine(img, M, (cols,rows))
+            pts = np.int0(cv.transform(np.array([box]), M))[0]
+        else:
+            pts = np.int0(box)
+            img_rot = img
+
         pts[pts < 0] = 0
 
-        # crop
-        img_crop = img_rot[pts[1][1]:pts[0][1],
-                        pts[1][0]:pts[2][0]]
-
-        return img_crop
+        if self.crop:
+            return img_rot[pts[1][1]:pts[2][1], pts[0][0]:pts[2][0]]
+        return img
 
     def detect_fields(self):
         corners = self.__detect_corners()
         locations = self.__get_corner_locations(corners)
+
+        if len(locations) == 0:
+            return []
+
         filtered = self.__sort_and_cleanup_corners(locations)
 
         if self.debug:
@@ -99,7 +108,8 @@ class BoardDetector:
             return self.__redetect_corners(filtered)
         except IndexError:
             print("WARN: Cannot match board fields")
-            return []
+
+        return []
 
     def __redetect_corners(self, corners):
         transposed = [[item for item in row if item is not None] for row in itertools.zip_longest(*corners)]
@@ -135,8 +145,12 @@ class BoardDetector:
         ret, labels, stats, centroids = cv.connectedComponentsWithStats(dst)
         criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 100, 0.001)
 
-        # Get corner centers (subpixel accuracy)
-        corners = cv.cornerSubPix(self.gray, np.float32(centroids), (5,5), (-1,-1), criteria)
+        try:
+            # Get corner centers (subpixel accuracy)
+            corners = cv.cornerSubPix(self.gray, np.float32(centroids), (5,5), (-1,-1), criteria)
+        except Exception:
+            return []
+
         return corners
 
     def __sort_and_cleanup_corners(self, corners, field_size=60):

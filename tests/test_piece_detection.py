@@ -11,7 +11,7 @@ import cv2 as cv
 
 sys.path.append("./src/detector") # TODO: How to Fix this? xdd
 
-from board_detector import BoardDetector
+from board_detector import BoardDetector, draw_corners
 from piece_detector import PieceDetector
 
 class PieceDetectionTest(unittest.TestCase):
@@ -22,11 +22,16 @@ class PieceDetectionTest(unittest.TestCase):
         #image_files = [f"{self.TEST_DATA}/full.JPG" ]
 
         for image_name in image_files:
+            cv.destroyAllWindows()
+
             img = cv.imread(image_name)
             img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
 
-            detector = BoardDetector(img, debug=False)
+            detector = BoardDetector(img, rotate=False, debug=False)
             img = detector.get_board()
+
+            if len(img) == 0:
+                continue
 
             detector.update_image(img)
             fields = detector.detect_fields()
@@ -38,17 +43,10 @@ class PieceDetectionTest(unittest.TestCase):
             with open(json_file) as expected_data:
                 expected = json.load(expected_data)
 
-            corners = fields
-            for row in range(len(corners)):
-                for point in range(len(corners[row])):
-                    color = (0, 0, 255) if row == point else (0,255,0)
-                    cv.circle(img, (int(corners[row][point][0]), int(corners[row][point][1])), 7, color, 2)
-                    cv.putText(img,  f"{(row, point)}", (int(corners[row][point][0]), int(corners[row][point][1])), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255))
+            draw_corners(img, fields)
 
             cv.imshow('img', img)
             cv.waitKey(0)
-
-            cv.destroyAllWindows()
 
             # self.assertTrue(self.__compare(expected, pieces.plain()))
 
@@ -65,3 +63,4 @@ class PieceDetectionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    cv.destroyAllWindows()
