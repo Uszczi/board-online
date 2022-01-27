@@ -4,19 +4,15 @@ import cv2 as cv
 
 sys.path.append("./src/detector")
 
-from board_detector import BoardDetector, draw_corners
+from board_detector import BoardDetector
 
 TEST_DATA = "./tests/test_data"
 
 img = cv.imread(f"{TEST_DATA}/full.JPG")
 img = cv.resize(img, None, fx=0.3, fy=0.3, interpolation = cv.INTER_CUBIC)
 
-detector = BoardDetector(img, True)
+detector = BoardDetector(img, debug=True)
 img = detector.get_board()
-
-detector.update_image(img)
-corners = detector.detect_fields()
-draw_corners(img, corners)
 
 cv.imshow('dst',img)
 

@@ -38,6 +38,9 @@ class PieceDetector:
                 field_image = self.__get_field_image(top_left, bottom_right)
                 field_name = self.from_xy(x, y)
 
+                if len(field_image) == 0:
+                    continue
+
                 if self.__is_white_piece(field_image):
                     board.add_white(field_name)
                     self.__drawDebug(top_left, bottom_right, (69, 255, 69))
@@ -62,9 +65,6 @@ class PieceDetector:
         lower_mask = cv.inRange(field_image, self.lower1, self.upper1)
         upper_mask = cv.inRange(field_image, self.lower2, self.upper2)
         full_mask = lower_mask | upper_mask
-
-        # cv.imshow("full_mask", full_mask)
-        # cv.waitKey(0)
 
         return np.average(full_mask) > threshold
 

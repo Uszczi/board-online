@@ -2,10 +2,9 @@ import sys
 import numpy as np
 import cv2 as cv
 
-sys.path.append("./src/detector")
-
-from board_detector import BoardDetector, draw_corners
-from piece_detector import PieceDetector
+from detector.board_detector import BoardDetector
+from detector.field_detector import FieldDetector, draw_corners
+from detector.piece_detector import PieceDetector
 
 camera = cv.VideoCapture(0)
 
@@ -18,28 +17,31 @@ while(True):
 
     if ret is False:
         print("No frame from camera")
-        continue
+        break
 
     img = cv.resize(frame, None, fx=0.2, fy=0.2, interpolation = cv.INTER_CUBIC)
+    detector = BoardDetector(img, rotate=False)
 
-    detector = BoardDetector(img, rotate=False, debug=False)
     img = detector.get_board()
 
     if len(img) == 0:
-        print("No board detected!")
+        print("No pieces detected!")
         continue
 
-    detector.update_image(img)
+    detector = FieldDetector(img)
     fields = detector.detect_fields()
 
-    piece_detector = PieceDetector(img, debug=True)
-    pieces = piece_detector.detect_pieces(fields)
-
-    print(pieces.plain())
-    cv.imshow('img', img)
+    try:
+        piece_detector = PieceDetector(img)
+        pieces = piece_detector.detect_pieces(fields)
+        print("Pieces: ", pieces.plain())
+    except Exception:
+        print("No pieces detected!")
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
 camera.release()
 cv.destroyAllWindows()
+
+
