@@ -8,8 +8,8 @@ from checkers_board import CheckersBoard
 
 class PieceDetector:
     def __init__(self, image, debug=False):
-        self.lower_white = np.array([0,0,20])
-        self.upper_white = np.array([180,30,255])
+        self.lower_white = np.array([0,0,0])
+        self.upper_white = np.array([150,50,255])
 
         # lower boundary RED color range values; Hue (0 - 10)
         self.lower1 = np.array([0, 70, 50])
@@ -20,7 +20,8 @@ class PieceDetector:
         self.upper2 = np.array([180, 255, 255])
 
         hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-        hsv = cv.GaussianBlur(hsv, (5,5), 1)
+        hsv = cv.bilateralFilter(hsv, 9, 75, 75)
+        hsv = cv.medianBlur(hsv, 5)
 
         self.image = hsv
         self.debug = debug
@@ -57,8 +58,14 @@ class PieceDetector:
     def __get_field_image(self, top_left, bottom_right):
         return self.image[int(top_left[1]):int(bottom_right[1]), int(top_left[0]):int(bottom_right[0])]
 
-    def __is_white_piece(self, field_image, threshold = 60):
+    def __is_white_piece(self, field_image, threshold = 80):
         mask = cv.inRange(field_image, self.lower_white, self.upper_white)
+
+        # cv.imshow('field_image', cv.cvtColor(field_image, cv.COLOR_HSV2BGR))
+        # cv.imshow('mask', mask)
+        # print("avg:", np.average(mask))
+        # cv.waitKey(0)
+
         return np.average(mask) > threshold
 
     def __is_black_piece(self, field_image, threshold = 80):
